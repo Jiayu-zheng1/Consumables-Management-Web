@@ -1,0 +1,204 @@
+@import "tailwindcss";
+
+/* ===== HeroUI Design System ===== */
+
+:root {
+  color-scheme: light dark;
+  --hui-bg: #f5f5f7;
+  --hui-surface: #ffffff;
+  --hui-surface2: #f4f4f5;
+  --hui-border: #e4e4e7;
+  --hui-border-hover: #d4d4d8;
+  --hui-text: #18181b;
+  --hui-text2: #52525b;
+  --hui-text3: #a1a1aa;
+  --hui-primary: #0072f5;
+  --hui-primary-light: rgba(0, 114, 245, 0.1);
+  --hui-primary-hover: #0060d0;
+  --hui-success: #17c964;
+  --hui-success-light: rgba(23, 201, 100, 0.1);
+  --hui-warning: #f5a524;
+  --hui-warning-light: rgba(245, 165, 36, 0.1);
+  --hui-danger: #f31260;
+  --hui-danger-light: rgba(243, 18, 96, 0.1);
+  --hui-secondary: #71717a;
+  --hui-secondary-light: rgba(113, 113, 122, 0.1);
+  --hui-radius-sm: 6px;
+  --hui-radius: 10px;
+  --hui-radius-lg: 14px;
+  --hui-radius-xl: 20px;
+  --hui-shadow-sm: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
+  --hui-shadow: 0 4px 14px rgba(0,0,0,.06), 0 0 0 0.5px rgba(0,0,0,.04);
+  --hui-shadow-lg: 0 8px 30px rgba(0,0,0,.08);
+  --hui-glass: rgba(255,255,255,.7);
+  --hui-glass-blur: 20px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hui-bg: #0d0d0d;
+    --hui-surface: #18181b;
+    --hui-surface2: #27272a;
+    --hui-border: #3f3f46;
+    --hui-border-hover: #52525b;
+    --hui-text: #fafafa;
+    --hui-text2: #a1a1aa;
+    --hui-text3: #71717a;
+    --hui-primary: #0072f5;
+    --hui-primary-light: rgba(0, 114, 245, 0.15);
+    --hui-success: #17c964;
+    --hui-warning: #f5a524;
+    --hui-danger: #f31260;
+    --hui-glass: rgba(24,24,27,.7);
+    --hui-shadow-sm: 0 1px 3px rgba(0,0,0,.2);
+    --hui-shadow: 0 4px 14px rgba(0,0,0,.3);
+    --hui-shadow-lg: 0 8px 30px rgba(0,0,0,.4);
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--hui-bg);
+  color: var(--hui-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Buttons */
+.hui-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 16px; font-size: 0.8125rem; font-weight: 500;
+  border: none; border-radius: var(--hui-radius);
+  cursor: pointer; transition: all .15s ease;
+  font-family: var(--font-sans);
+}
+.hui-btn:active { transform: scale(.97); }
+.hui-btn-sm { height: 32px; padding: 0 12px; font-size: .75rem; border-radius: var(--hui-radius-sm); }
+.hui-btn-icon { width: 36px; padding: 0; justify-content: center; }
+.hui-btn-icon.hui-btn-sm { width: 32px; }
+.hui-btn-solid { background: var(--hui-primary); color: #fff; }
+.hui-btn-solid:hover { background: var(--hui-primary-hover); }
+.hui-btn-bordered { background: transparent; color: var(--hui-text); border: 2px solid var(--hui-border); }
+.hui-btn-bordered:hover { border-color: var(--hui-border-hover); background: var(--hui-surface2); }
+.hui-btn-light { background: var(--hui-primary-light); color: var(--hui-primary); }
+.hui-btn-light:hover { background: rgba(0,114,245,.18); }
+.hui-btn-ghost { background: transparent; color: var(--hui-text2); }
+.hui-btn-ghost:hover { background: var(--hui-surface2); color: var(--hui-text); }
+.hui-btn-danger { background: var(--hui-danger-light); color: var(--hui-danger); }
+.hui-btn-danger:hover { background: rgba(243,18,96,.18); }
+.hui-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* Inputs */
+.hui-input-wrap { display: flex; flex-direction: column; gap: 4px; }
+.hui-input-wrap label { font-size: .75rem; font-weight: 500; color: var(--hui-text2); padding-left: 2px; }
+.hui-input {
+  height: 36px; padding: 0 12px; font-size: .8125rem; font-family: var(--font-sans);
+  color: var(--hui-text); background: var(--hui-surface);
+  border: 2px solid var(--hui-border); border-radius: var(--hui-radius);
+  outline: none; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.hui-input:focus { border-color: var(--hui-primary); box-shadow: 0 0 0 3px var(--hui-primary-light); }
+.hui-input::placeholder { color: var(--hui-text3); }
+.hui-select {
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 32px;
+}
+.hui-textarea { height: auto; min-height: 72px; padding: 10px 12px; resize: vertical; }
+
+/* Cards */
+.hui-card {
+  background: var(--hui-surface); border: 1px solid var(--hui-border);
+  border-radius: var(--hui-radius-lg); padding: 20px; box-shadow: var(--hui-shadow-sm);
+}
+
+/* Chips */
+.hui-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; font-size: .6875rem; font-weight: 600;
+  border-radius: 9999px; white-space: nowrap;
+}
+.hui-chip-success { background: var(--hui-success-light); color: var(--hui-success); }
+.hui-chip-warning { background: var(--hui-warning-light); color: var(--hui-warning); }
+.hui-chip-danger { background: var(--hui-danger-light); color: var(--hui-danger); }
+.hui-chip-default { background: var(--hui-secondary-light); color: var(--hui-secondary); }
+.hui-chip-primary { background: var(--hui-primary-light); color: var(--hui-primary); }
+
+/* Table */
+.hui-table-wrap { overflow-x: auto; border: 1px solid var(--hui-border); border-radius: var(--hui-radius-lg); }
+.hui-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.hui-table thead th {
+  padding: 8px 14px; text-align: start; font-weight: 600; font-size: .75rem;
+  color: var(--hui-text2); background: var(--hui-surface2); border-bottom: 1px solid var(--hui-border);
+}
+.hui-table tbody td { padding: 10px 14px; border-bottom: 1px solid var(--hui-border); }
+.hui-table tbody tr:last-child td { border-bottom: none; }
+.hui-table tbody tr:hover { background: var(--hui-surface2); }
+
+/* Modal */
+.hui-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+  padding: 20px; animation: huiFadeIn .15s ease;
+}
+.hui-dialog {
+  background: var(--hui-surface); border: 1px solid var(--hui-border);
+  border-radius: var(--hui-radius-xl); padding: 24px;
+  width: min(100%, 440px); max-height: 85vh; overflow-y: auto;
+  box-shadow: var(--hui-shadow-lg); animation: huiSlideIn .2s ease;
+}
+.hui-dialog-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 16px; }
+
+/* Sidebar */
+.hui-sidebar {
+  background: var(--hui-glass);
+  backdrop-filter: blur(var(--hui-glass-blur));
+  -webkit-backdrop-filter: blur(var(--hui-glass-blur));
+  border-right: 1px solid var(--hui-border);
+}
+
+/* Stat card */
+.hui-stat {
+  text-align: center; padding: 16px;
+  background: var(--hui-surface); border: 1px solid var(--hui-border);
+  border-radius: var(--hui-radius-lg); transition: box-shadow .15s;
+}
+.hui-stat:hover { box-shadow: var(--hui-shadow); }
+.hui-stat-label { font-size: .6875rem; font-weight: 500; color: var(--hui-text3); }
+.hui-stat-value { font-size: 1.75rem; font-weight: 700; margin-top: 4px; }
+
+/* Animations */
+@keyframes huiFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes huiSlideIn {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--hui-border-hover); border-radius: 3px; }
+
+/* Skip link */
+.skip-link {
+  position: absolute; top: -100%; left: 0; z-index: 1000;
+  padding: 8px 20px; background: var(--hui-primary); color: #fff;
+  font-size: .8125rem; font-weight: 500; border-radius: 0 0 8px 0;
+}
+.skip-link:focus { top: 0; }
+
+/* Screen reader only */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
