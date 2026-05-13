@@ -12,11 +12,11 @@ import {
 
 const STATUS_MAP: Record<string, string> = {
   pending_section: "待课级审批", pending_department: "待部级审批",
-  approved: "已通过", rejected: "已拒绝",
+  closed: "已结案", rejected: "已拒绝", fulfilled: "已入库",
 };
 const STATUS_COLOR: Record<string, string> = {
   pending_section: "hui-chip-warning", pending_department: "hui-chip-primary",
-  approved: "hui-chip-success", rejected: "hui-chip-danger",
+  closed: "hui-chip-success", rejected: "hui-chip-danger", fulfilled: "hui-chip-default",
 };
 
 export default function RequisitionsPage() {
@@ -39,6 +39,7 @@ export default function RequisitionsPage() {
   const [newProject, setNewProject] = useState("");
   const [newPrice, setNewPrice] = useState("");
   const [newUnit, setNewUnit] = useState("个");
+  const [newSupplier, setNewSupplier] = useState("");
   const [newQty, setNewQty] = useState("1");
   const [newReason, setNewReason] = useState("");
   const [showNewCat, setShowNewCat] = useState(false);
@@ -70,7 +71,7 @@ export default function RequisitionsPage() {
     try { setSubmitting(true);
       const data: Record<string, unknown> = { quantity: Number(mode === "select" ? selQty : newQty), reason: mode === "select" ? selReason : newReason };
       if (mode === "select") { data.item_id = Number(selItemId); }
-      else { data.new_item_name = newName; data.new_item_category_id = newCatId ? Number(newCatId) : undefined; data.new_item_project = newProject; data.new_item_price = newPrice ? Number(newPrice) : undefined; data.new_item_unit = newUnit; }
+      else { data.new_item_name = newName; data.new_item_category_id = newCatId ? Number(newCatId) : undefined; data.new_item_project = newProject; data.new_item_price = newPrice ? Number(newPrice) : undefined; data.new_item_unit = newUnit; data.new_item_supplier = newSupplier; }
       const res = await createRequisition(data as any);
       setFormMsg(res.message + " → " + res.status_label);
       setTimeout(() => { setShowForm(false); load(); }, 1000);
@@ -115,8 +116,9 @@ export default function RequisitionsPage() {
               {formMsg && <div role="status" className="p-2.5 rounded-lg text-xs" style={{ background: "var(--hui-success-light)", color: "var(--hui-success)" }}>{formMsg}</div>}
               {mode === "select" ? (
                 <>
-                  <Field label="耗材 *"><select className="hui-input hui-select" required value={selItemId} onChange={(e) => setSelItemId(e.target.value)}><option value="">请选择</option>{items.map((it) => (<option key={it.id} value={it.id}>{it.name} ({it.project || "-"}) 库存:{it.current_stock}{it.unit}</option>))}</select></Field>
-                  <Field label="单价"><input className="hui-input" type="text" readOnly value={selItemId ? (() => { const it = items.find((x) => x.id === Number(selItemId)); return it?.price != null ? `¥${it.price.toFixed(2)} (不可修改)` : "未设定"; })() : ""} style={{ background: "var(--hui-surface2)", cursor: "not-allowed" }} /></Field>
+                  <Field label="耗材 *"><select className="hui-input hui-select" required value={selItemId} onChange={(e) => setSelItemId(e.target.value)}><option value="">请选择</option>{items.map((it) => (<option key={it.id} value={it.id}>{it.name} ({it.project || "-"}) 库存:{it.current_stock}{it.unit}{it.supplier ? ` 供应商:${it.supplier}` : ""}</option>))}</select></Field>
+                  <Field label="单价"><input className="hui-input" type="text" readOnly value={selItemId ? (() => { const it = items.find((x) => x.id === Number(selItemId)); return it?.price != null ? `¥${it.price.toFixed(2)} (自动带入)` : "未设定"; })() : ""} style={{ background: "var(--hui-surface2)", cursor: "not-allowed" }} /></Field>
+                  {selItemId && (() => { const it = items.find((x) => x.id === Number(selItemId)); return it?.supplier ? <Field label="供应商"><input className="hui-input" type="text" readOnly value={it.supplier + " (自动带入)"} style={{ background: "var(--hui-surface2)", cursor: "not-allowed" }} /></Field> : null; })()}
                   <Field label="数量 * (整数)"><input className="hui-input" type="number" min="1" step="1" required value={selQty} onChange={(e) => setSelQty(e.target.value.replace(/\D/g, ""))} /></Field>
                   <Field label="申请理由"><input className="hui-input" value={selReason} onChange={(e) => setSelReason(e.target.value)} placeholder="用途说明" /></Field>
                 </>
@@ -140,6 +142,7 @@ export default function RequisitionsPage() {
                     <Field label="单价 ¥"><input className="hui-input" type="number" min="0" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="单价" /></Field>
                     <Field label="单位"><input className="hui-input" value={newUnit} onChange={(e) => setNewUnit(e.target.value)} /></Field>
                   </div>
+                  <Field label="供应商"><input className="hui-input" value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} placeholder="供应商" /></Field>
                   <Field label="数量 * (整数)"><input className="hui-input" type="number" min="1" step="1" required value={newQty} onChange={(e) => setNewQty(e.target.value.replace(/\D/g, ""))} /></Field>
                   <Field label="申请理由"><input className="hui-input" value={newReason} onChange={(e) => setNewReason(e.target.value)} /></Field>
                 </>
@@ -188,7 +191,7 @@ function ApproveTab({ loading, reqs, comment, setComment, onApprove }: {
               </div>
               <div className="text-xs mt-0.5" style={{ color: "var(--hui-text2)" }}>
                 {r.new_item_price != null && <span>单价¥{r.new_item_price.toFixed(2)} · </span>}
-                {r.reason || "无理由"} · 专案:{r.new_item_project || "-"} · 申请人: {r.requester_name} · {new Date(r.created_at).toLocaleString("zh-CN")}
+{r.new_item_supplier ? `供应商:${r.new_item_supplier} · ` : ""}{r.reason || "无理由"} · 专案:{r.new_item_project || "-"} · 申请人: {r.requester_name} · {new Date(r.created_at).toLocaleString("zh-CN")}
               </div>
               {r.section_comment && <div className="text-xs mt-1" style={{ color: "var(--hui-primary)" }}>课级意见: {r.section_comment}</div>}
             </div>
@@ -213,8 +216,8 @@ function ReqList({ loading, reqs, empty, showDetail }: { loading: boolean; reqs:
       {reqs.map((r) => (
         <div key={r.id} className="hui-card flex justify-between items-start">
           <div>
-            <div className="font-medium text-sm">#{r.id} {r.item_name || r.new_item_name || "新耗材"} × {r.quantity}{r.new_item_unit} {r.new_item_price ? `¥${r.new_item_price}` : ""}</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--hui-text2)" }}>{r.reason || "无理由"} · 专案:{r.new_item_project || "-"} · {new Date(r.created_at).toLocaleString("zh-CN")}</div>
+            <div className="font-medium text-sm">#{r.id} {r.item_name || r.new_item_name || "新耗材"} × {r.quantity}{r.new_item_unit} {r.new_item_price ? `¥${(r.new_item_price * r.quantity).toFixed(2)}` : ""}</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--hui-text2)" }}>{r.new_item_supplier ? `供应商:${r.new_item_supplier} · ` : ""}{r.reason || "无理由"} · 专案:{r.new_item_project || "-"} · {new Date(r.created_at).toLocaleString("zh-CN")}</div>
             {showDetail && r.section_comment && <div className="text-xs mt-1" style={{ color: "var(--hui-primary)" }}>课级审批: {r.section_comment}</div>}
             {showDetail && r.department_comment && <div className="text-xs mt-0.5" style={{ color: "var(--hui-success)" }}>部级审批: {r.department_comment}</div>}
           </div>

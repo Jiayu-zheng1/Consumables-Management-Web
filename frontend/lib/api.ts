@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "/api";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -91,7 +91,9 @@ export interface Item {
   price: number | null;
   unit: string;
   min_stock: number;
+  max_stock: number;
   current_stock: number;
+  supplier: string;
   description: string;
   created_at: string;
   updated_at: string;
@@ -105,7 +107,9 @@ export interface ItemCreate {
   price?: number;
   unit?: string;
   min_stock?: number;
+  max_stock?: number;
   current_stock?: number;
+  supplier?: string;
   description?: string;
 }
 
@@ -116,7 +120,8 @@ export interface ItemUpdate {
   price?: number;
   unit?: string;
   min_stock?: number;
-  current_stock?: number;
+  max_stock?: number;
+  supplier?: string;
   description?: string;
 }
 
@@ -213,21 +218,71 @@ export const createOutbound = (data: OutboundCreate) =>
 
 export const getProjects = () => request<string[]>("/projects");
 
+// ── Dashboard Charts ──────────────────────────────────────
+
+export interface SpendingItem {
+  id: number; amount: number; month: number; year: number;
+  month_label: string; department: string; category: string;
+  item_name: string; quantity: number; requester: string;
+}
+
+export interface SpendingData {
+  data: SpendingItem[]; departments: string[]; years: number[];
+}
+
+export const getSpendingData = (params: { year?: number; month?: number; department?: string } = {}) => {
+  const sp = new URLSearchParams();
+  if (params.year) sp.set("year", String(params.year));
+  if (params.month) sp.set("month", String(params.month));
+  if (params.department) sp.set("department", params.department);
+  return request<SpendingData>(`/dashboard/spending?${sp.toString()}`);
+};
+
 // ── Users ────────────────────────────────────────────────
 
 export interface UserInfo {
   id: number;
   username: string;
+  employee_id: string;
+  display_name: string;
   level: string;
   department_code: string;
+  department_scope: string;
   role: string;
   created_at: string;
 }
 
 export const getUsers = () => request<UserInfo[]>("/users");
 
-export const updateUserLevel = (userId: number, level: string, department_code: string) =>
-  request<{ message: string }>(`/users/${userId}/level`, { method: "PUT", body: JSON.stringify({ level, department_code }) });
+export const updateUserLevel = (userId: number, level: string, department_code: string, department_scope?: string) =>
+  request<{ message: string; department_scope: string }>(`/users/${userId}/level`, { method: "PUT", body: JSON.stringify({ level, department_code, department_scope: department_scope || "" }) });
+
+export const deleteUser = (userId: number) =>
+  request<{ message: string }>(`/users/${userId}`, { method: "DELETE" });
+
+// ── Profile ─────────────────────────────────────────────
+
+export interface ProfileInfo {
+  username: string;
+  employee_id: string;
+  display_name: string;
+  level: string;
+  department_code: string;
+  department_scope: string;
+  role: string;
+  created_at: string;
+}
+
+export interface ProfileUpdate {
+  display_name?: string;
+  department_code?: string;
+  password?: string;
+}
+
+export const getProfile = () => request<ProfileInfo>("/profile");
+
+export const updateProfile = (data: ProfileUpdate) =>
+  request<{ message: string; display_name: string; department_code: string }>("/profile", { method: "PUT", body: JSON.stringify(data) });
 
 // ── Requisitions ────────────────────────────────────────
 
@@ -242,6 +297,7 @@ export interface Requisition {
   new_item_project: string;
   new_item_price: number | null;
   new_item_unit: string;
+  new_item_supplier: string;
   quantity: number;
   reason: string;
   status: string;
@@ -260,6 +316,7 @@ export interface RequisitionCreate {
   new_item_project?: string;
   new_item_price?: number;
   new_item_unit?: string;
+  new_item_supplier?: string;
   quantity: number;
   reason?: string;
 }

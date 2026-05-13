@@ -5,11 +5,11 @@ import { getAllRequisitions, type Requisition } from "@/lib/api";
 
 const STATUS_LABELS: Record<string, string> = {
   pending_section: "待课级审批", pending_department: "待部级审批",
-  approved: "已通过", rejected: "已拒绝",
+  closed: "已结案", rejected: "已拒绝", fulfilled: "已入库",
 };
 const STATUS_COLORS: Record<string, string> = {
   pending_section: "hui-chip-warning", pending_department: "hui-chip-primary",
-  approved: "hui-chip-success", rejected: "hui-chip-danger",
+  closed: "hui-chip-success", rejected: "hui-chip-danger", fulfilled: "hui-chip-default",
 };
 
 export default function RecordsPage() {

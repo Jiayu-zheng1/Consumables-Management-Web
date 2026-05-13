@@ -29,7 +29,9 @@ class ItemCreate(BaseModel):
     price: Optional[float] = None
     unit: str = "个"
     min_stock: float = 0
+    max_stock: float = 0
     current_stock: float = 0
+    supplier: str = ""
     description: str = ""
 
 
@@ -40,7 +42,9 @@ class ItemUpdate(BaseModel):
     price: Optional[float] = None
     unit: Optional[str] = None
     min_stock: Optional[float] = None
+    max_stock: Optional[float] = None
     current_stock: Optional[float] = None
+    supplier: Optional[str] = None
     description: Optional[str] = None
 
 
@@ -52,7 +56,9 @@ class ItemOut(BaseModel):
     price: Optional[float] = None
     unit: str
     min_stock: float
+    max_stock: float
     current_stock: float
+    supplier: str
     description: str
     created_at: datetime
     updated_at: datetime
@@ -136,17 +142,27 @@ class StockAlert(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
+    employee_id: str = ""
+    display_name: str = ""
     level: str
     department_code: str
+    department_scope: str = ""
     role: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
+class ProfileUpdate(BaseModel):
+    display_name: Optional[str] = None
+    department_code: Optional[str] = None
+    password: Optional[str] = None
+
+
 class UserLevelUpdate(BaseModel):
     level: str
     department_code: str = ""
+    department_scope: str = ""
 
 
 # ── Requisition ────────────────────────────────────────
@@ -158,6 +174,7 @@ class RequisitionCreate(BaseModel):
     new_item_project: str = ""
     new_item_price: Optional[float] = None
     new_item_unit: str = "个"
+    new_item_supplier: str = ""
     quantity: int = Field(..., ge=1)
     reason: str = ""
 

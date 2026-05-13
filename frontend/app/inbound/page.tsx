@@ -135,7 +135,7 @@ export default function InboundPage() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               {formError && <div role="alert" className="p-2.5 rounded-lg text-xs" style={{ background: "var(--hui-danger-light)", color: "var(--hui-danger)" }}>{formError}</div>}
               {mode === "select" ? (<>
-                <div className="hui-input-wrap"><label>耗材 *</label><select className="hui-input hui-select" required value={selItemId} onChange={(e) => setSelItemId(e.target.value)}><option value="">请选择</option>{items.map((it) => (<option key={it.id} value={it.id}>{it.name} ({it.project || "无专案"}) 库存:{it.current_stock}{it.unit}</option>))}</select></div>
+                <div className="hui-input-wrap"><label>耗材 *</label><select className="hui-input hui-select" required value={selItemId} onChange={(e) => { setSelItemId(e.target.value); const it = items.find((x) => x.id === Number(e.target.value)); if (it) { if (!selSupplier && it.supplier) setSelSupplier(it.supplier); } }}><option value="">请选择</option>{items.map((it) => (<option key={it.id} value={it.id}>{it.name} ({it.project || "无专案"}) 库存:{it.current_stock}{it.unit}{it.supplier ? ` 供应商:${it.supplier}` : ""}</option>))}</select></div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="hui-input-wrap"><label>数量 *</label><input className="hui-input" type="number" min="0.01" step="0.01" required value={selQty} onChange={(e) => setSelQty(e.target.value)} /></div>
                   <div className="hui-input-wrap"><label>入库单价</label><input className="hui-input" type="number" min="0" step="0.01" value={selPrice} onChange={(e) => setSelPrice(e.target.value)} placeholder="留空同参考价" /></div>

@@ -18,7 +18,7 @@ export default function ItemsPage() {
   const [lowStockOnly, setLowStockOnly] = useState(false);
 
   const [editing, setEditing] = useState<Item | null>(null);
-  const [form, setForm] = useState({ name: "", category_id: "", project: "", price: "", unit: "个", min_stock: "0", current_stock: "0", description: "" });
+  const [form, setForm] = useState({ name: "", category_id: "", project: "", price: "", unit: "个", min_stock: "0", max_stock: "0", current_stock: "0", supplier: "", description: "" });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -42,11 +42,11 @@ export default function ItemsPage() {
   useEffect(() => { loadMeta(); }, [loadMeta]);
 
   function openCreate() {
-    setEditing(null); setForm({ name: "", category_id: "", project: "", price: "", unit: "个", min_stock: "0", current_stock: "0", description: "" });
+    setEditing(null); setForm({ name: "", category_id: "", project: "", price: "", unit: "个", min_stock: "0", max_stock: "0", current_stock: "0", supplier: "", description: "" });
     setFormError(""); setNewCatName(""); setShowNewCat(false); setShowForm(true);
   }
   function openEdit(item: Item) {
-    setEditing(item); setForm({ name: item.name, category_id: String(item.category_id), project: item.project, price: item.price != null ? String(item.price) : "", unit: item.unit, min_stock: String(item.min_stock), current_stock: String(item.current_stock), description: item.description });
+    setEditing(item); setForm({ name: item.name, category_id: String(item.category_id), project: item.project, price: item.price != null ? String(item.price) : "", unit: item.unit, min_stock: String(item.min_stock), max_stock: String(item.max_stock), current_stock: String(item.current_stock), supplier: item.supplier || "", description: item.description });
     setFormError(""); setNewCatName(""); setShowNewCat(false); setShowForm(true);
   }
 
@@ -60,7 +60,7 @@ export default function ItemsPage() {
     e.preventDefault();
     if (!form.name.trim() || !form.category_id) { setFormError("请填写名称和类别"); return; }
     try { setSubmitting(true); setFormError("");
-      const d = { ...form, category_id: Number(form.category_id), min_stock: Number(form.min_stock), current_stock: Number(form.current_stock), price: form.price ? Number(form.price) : undefined };
+      const d = { ...form, category_id: Number(form.category_id), min_stock: Number(form.min_stock), max_stock: Number(form.max_stock), current_stock: Number(form.current_stock), price: form.price ? Number(form.price) : undefined };
       editing ? await updateItem(editing.id, d as ItemUpdate) : await createItem(d as unknown as ItemCreate);
       setShowForm(false); load(); loadMeta();
     } catch (e) { setFormError(e instanceof Error ? e.message : "操作失败"); }
@@ -93,16 +93,18 @@ export default function ItemsPage() {
       : items.length === 0 ? <div className="text-center py-16" style={{ color: "var(--hui-text3)" }}>暂无耗材，点击右上角「新增」开始</div>
       : (
         <div className="hui-table-wrap"><table className="hui-table">
-          <thead><tr><th>名称</th><th>类别</th><th>专案</th><th>单价</th><th>单位</th><th>库存</th><th>最低</th><th>操作</th></tr></thead>
+          <thead><tr><th>名称</th><th>类别</th><th>专案</th><th>供应商</th><th>单价</th><th>单位</th><th>库存</th><th>最低</th><th>最高</th><th>操作</th></tr></thead>
           <tbody>
             {items.map((item) => (<tr key={item.id}>
               <td className="font-medium">{item.name}</td>
               <td><span className="hui-chip hui-chip-primary">{item.category?.name || "-"}</span></td>
               <td>{item.project || <span style={{ color: "var(--hui-text3)" }}>-</span>}</td>
+              <td className="text-xs max-w-[100px] truncate" title={item.supplier}>{item.supplier || "-"}</td>
               <td style={{ color: "var(--hui-text2)" }}>{item.price != null ? `¥${item.price.toFixed(2)}` : "-"}</td>
               <td style={{ color: "var(--hui-text2)" }}>{item.unit}</td>
               <td><span className={`hui-chip ${item.current_stock <= item.min_stock ? "hui-chip-danger" : "hui-chip-success"}`}>{item.current_stock}</span></td>
               <td style={{ color: "var(--hui-text2)" }}>{item.min_stock}</td>
+              <td style={{ color: "var(--hui-text2)" }}>{item.max_stock > 0 ? item.max_stock : "-"}</td>
               <td><div className="flex gap-1">
                 <button className="hui-btn hui-btn-icon hui-btn-sm hui-btn-ghost" onClick={() => openEdit(item)}><IconEdit size={15} /></button>
                 {isAdmin && <button className="hui-btn hui-btn-icon hui-btn-sm hui-btn-ghost" onClick={() => { setDelTarget(item); setShowDelete(true); }} style={{ color: "var(--hui-danger)" }}><IconTrash size={15} /></button>}
@@ -137,9 +139,11 @@ export default function ItemsPage() {
                 <div className="hui-input-wrap"><label>单价</label><input className="hui-input" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="参考单价" /></div>
                 <div className="hui-input-wrap"><label>单位</label><input className="hui-input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
               </div>
+              <div className="hui-input-wrap"><label>供应商</label><input className="hui-input" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} placeholder="默认供应商" /></div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="hui-input-wrap"><label>最低库存</label><input className="hui-input" type="number" value={form.min_stock} onChange={(e) => setForm({ ...form, min_stock: e.target.value })} /></div>
-                <div className="hui-input-wrap"><label>当前库存</label><input className="hui-input" type="number" value={form.current_stock} onChange={(e) => setForm({ ...form, current_stock: e.target.value })} /></div>
+                <div className="hui-input-wrap"><label>最高库存</label><input className="hui-input" type="number" value={form.max_stock} onChange={(e) => setForm({ ...form, max_stock: e.target.value })} /></div>
+                <div className="hui-input-wrap"><label>当前库存</label><input className="hui-input" type="number" value={form.current_stock} onChange={(e) => setForm({ ...form, current_stock: e.target.value })} disabled={!!editing} title={editing ? "库存只能通过出入库操作变更" : "初始库存"} /></div>
               </div>
               <div className="hui-input-wrap"><label>描述</label><textarea className="hui-input hui-textarea" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
               <div className="flex justify-end gap-2 mt-2">

@@ -8,9 +8,11 @@ export default function LoginPage() {
   const { login, register } = useAuth();
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [username, setUsername] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
+  const [empId, setEmpId] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [deptCode, setDeptCode] = useState("");
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
@@ -19,20 +21,23 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setMsg("");
-    if (!username.trim() || !password.trim()) { setError("请输入用户名和密码"); return; }
+    if (mode === "login") {
+      if (!loginId.trim() || !password.trim()) { setError("请输入工号和密码"); return; }
+    }
     if (mode === "register") {
+      if (!empId.trim() || !displayName.trim() || !password.trim()) { setError("工号、姓名、密码为必填项"); return; }
       if (password.length < 6) { setError("密码至少6位"); return; }
       if (password !== confirmPwd) { setError("两次密码不一致"); return; }
       if (!deptCode.trim()) { setError("请输入部门代码"); return; }
     }
     try { setSubmitting(true);
       if (mode === "register") {
-        await register(username, password, deptCode);
+        await register(empId, displayName, password, deptCode);
         setMsg("注册成功，请登录");
-        setUsername(""); setPassword(""); setConfirmPwd("");
+        setEmpId(""); setDisplayName(""); setPassword(""); setConfirmPwd(""); setDeptCode("");
         setMode("login");
       } else {
-        await login(username, password);
+        await login(loginId, password);
         router.push("/");
       }
     } catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
@@ -51,7 +56,8 @@ export default function LoginPage() {
           {error && <div role="alert" className="p-3 rounded-lg text-sm" style={{ background: "var(--hui-danger-light)", color: "var(--hui-danger)" }}>{error}</div>}
           {msg && <div role="status" className="p-3 rounded-lg text-sm" style={{ background: "var(--hui-success-light)", color: "var(--hui-success)" }}>{msg}</div>}
 
-          <div className="hui-input-wrap"><label htmlFor="l-u">用户名</label><input id="l-u" className="hui-input" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)} placeholder={mode === "register" ? "至少3位字符" : "请输入用户名"} /></div>
+          <div className="hui-input-wrap"><label htmlFor="l-u">{mode === "register" ? "工号" : "工号/用户名"}</label><input id="l-u" className="hui-input" autoComplete="username" required value={mode === "register" ? empId : loginId} onChange={(e) => mode === "register" ? setEmpId(e.target.value) : setLoginId(e.target.value)} placeholder={mode === "register" ? "员工工号" : "输入工号或用户名"} /></div>
+          {mode === "register" && <><div className="hui-input-wrap"><label htmlFor="l-n">姓名</label><input id="l-n" className="hui-input" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="真实姓名" /></div></>}
           <div className="hui-input-wrap"><label htmlFor="l-p">密码</label><input id="l-p" className="hui-input" type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder={mode === "register" ? "至少6位字符" : "请输入密码"} /></div>
           {mode === "register" && <><div className="hui-input-wrap"><label htmlFor="l-c">确认密码</label><input id="l-c" className="hui-input" type="password" autoComplete="new-password" required value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="再次输入密码" /></div><div className="hui-input-wrap"><label htmlFor="l-d">部门代码</label><input id="l-d" className="hui-input" required value={deptCode} onChange={(e) => setDeptCode(e.target.value.toUpperCase())} placeholder="如 D001" /></div></>}
 

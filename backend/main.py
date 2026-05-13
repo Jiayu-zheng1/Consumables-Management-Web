@@ -1,5 +1,5 @@
 import secrets
-from fastapi import FastAPI, Depends, HTTPException, Query, Header
+from fastapi import FastAPI, Depends, HTTPException, Query, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -30,21 +30,41 @@ app.add_middleware(
 
 TOKENS: dict[str, dict] = {}
 
+# 登录限流: {ip: (count, window_start_timestamp)}
+LOGIN_RATE_LIMIT: dict[str, tuple[int, float]] = {}
+
 security = HTTPBearer(auto_error=False)
 
 
 LEVEL_HIERARCHY = {"staff": 0, "section": 1, "department": 2, "admin": 3}
 
 
+def _get_user_dept_list(user: dict) -> list[str]:
+    """获取用户可管理的部门列表"""
+    depts = [user.get("department_code", "")]
+    scope = user.get("department_scope", "")
+    if scope:
+        depts.extend([d.strip() for d in scope.split(",") if d.strip()])
+    return [d for d in depts if d]
+
+
 def _migrate_db(db: Session):
-    try:
-        db.execute("ALTER TABLE users ADD COLUMN level VARCHAR(20) NOT NULL DEFAULT 'staff'")
-        db.commit()
-    except: db.rollback()
-    try:
-        db.execute("ALTER TABLE users ADD COLUMN department_code VARCHAR(100) NOT NULL DEFAULT ''")
-        db.commit()
-    except: db.rollback()
+    migrations = [
+        ("ALTER TABLE users ADD COLUMN level VARCHAR(20) NOT NULL DEFAULT 'staff'", "users.level"),
+        ("ALTER TABLE users ADD COLUMN department_code VARCHAR(100) NOT NULL DEFAULT ''", "users.department_code"),
+        ("ALTER TABLE users ADD COLUMN department_scope VARCHAR(500) NOT NULL DEFAULT ''", "users.department_scope"),
+        ("ALTER TABLE items ADD COLUMN max_stock FLOAT NOT NULL DEFAULT 0", "items.max_stock"),
+        ("ALTER TABLE items ADD COLUMN supplier VARCHAR(200) NOT NULL DEFAULT ''", "items.supplier"),
+        ("ALTER TABLE requisitions ADD COLUMN new_item_supplier VARCHAR(200) NOT NULL DEFAULT ''", "requisitions.new_item_supplier"),
+        ("ALTER TABLE users ADD COLUMN employee_id VARCHAR(50)", "users.employee_id"),
+        ("ALTER TABLE users ADD COLUMN display_name VARCHAR(100) NOT NULL DEFAULT ''", "users.display_name"),
+    ]
+    for sql, name in migrations:
+        try:
+            db.execute(sql)
+            db.commit()
+        except Exception:
+            db.rollback()
 
 
 def _seed_admin(db: Session):
@@ -52,7 +72,8 @@ def _seed_admin(db: Session):
     admin = db.query(models.User).filter(models.User.username == "admin").first()
     if not admin:
         admin = models.User(
-            username="admin", password_hash=models.User.hash_password("admin123"),
+            username="admin", employee_id="admin", display_name="系统管理员",
+            password_hash=models.User.hash_password("admin123"),
             role="admin", level="admin", department_code="",
         )
         db.add(admin)
@@ -90,45 +111,63 @@ def require_section(user: dict = Depends(get_current_user)):
 
 
 @app.post("/api/login")
-def login(data: dict, db: Session = Depends(get_db)):
+def login(data: dict, db: Session = Depends(get_db), request: Request = None):
+    # 登录频率限制
+    import time
+    ip = request.client.host if request and request.client else "127.0.0.1"
+    now = time.time()
+    count, window = LOGIN_RATE_LIMIT.get(ip, (0, now))
+    if now - window > 60:
+        count, window = 0, now
+    if count >= 5:
+        raise HTTPException(status_code=429, detail="登录尝试过于频繁，请1分钟后再试")
+    LOGIN_RATE_LIMIT[ip] = (count + 1, window)
+
     _seed_admin(db)
-    username = data.get("username", "")
+    login_id = (data.get("username", "") or data.get("employee_id", "")).strip()
     password = data.get("password", "")
-    user = db.query(models.User).filter(models.User.username == username).first()
+    # 支持工号或用户名登录
+    user = db.query(models.User).filter(
+        (models.User.employee_id == login_id) | (models.User.username == login_id)
+    ).first()
     if not user or not models.User.verify_password(password, user.password_hash):
-        raise HTTPException(status_code=401, detail="用户名或密码错误")
+        raise HTTPException(status_code=401, detail="工号或密码错误")
     token = secrets.token_urlsafe(32)
-    TOKENS[token] = {"username": user.username, "level": user.level, "department_code": user.department_code, "role": user.role}
-    return {"token": token, "username": user.username, "level": user.level, "department_code": user.department_code, "role": user.role}
+    TOKENS[token] = {"username": user.username, "employee_id": user.employee_id or "", "display_name": user.display_name or "", "level": user.level, "department_code": user.department_code, "department_scope": user.department_scope or "", "role": user.role}
+    return {"token": token, "username": user.username, "employee_id": user.employee_id or "", "display_name": user.display_name or "", "level": user.level, "department_code": user.department_code, "department_scope": user.department_scope or "", "role": user.role}
 
 
 @app.post("/api/register")
 def register(data: dict, db: Session = Depends(get_db)):
     _seed_admin(db)
-    username = data.get("username", "").strip()
+    employee_id = data.get("employee_id", "").strip()
+    display_name = data.get("display_name", "").strip()
     password = data.get("password", "").strip()
     department_code = data.get("department_code", "").strip().upper()
     reg_level = data.get("level", "staff").strip()
     if reg_level not in ("staff", "section"):
         reg_level = "staff"
-    if username.lower() == "admin":
-        raise HTTPException(status_code=400, detail="该用户名已被系统保留")
-    if len(username) < 3 or len(password) < 6:
-        raise HTTPException(status_code=400, detail="用户名至少3位，密码至少6位")
+    if not employee_id or not password or not display_name:
+        raise HTTPException(status_code=400, detail="工号、姓名、密码为必填项")
+    if employee_id.lower() == "admin":
+        raise HTTPException(status_code=400, detail="该工号已被系统保留")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="密码至少6位")
     if reg_level in ("staff", "section") and not department_code:
         raise HTTPException(status_code=400, detail="课级及以下需填写部门代码")
-    existing = db.query(models.User).filter(models.User.username == username).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="用户名已存在")
+    if db.query(models.User).filter(models.User.employee_id == employee_id).first():
+        raise HTTPException(status_code=400, detail="工号已存在")
     user = models.User(
-        username=username,
+        username=employee_id,
+        employee_id=employee_id,
+        display_name=display_name,
         password_hash=models.User.hash_password(password),
         role="user", level=reg_level, department_code=department_code,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"id": user.id, "username": user.username, "level": user.level, "department_code": user.department_code}
+    return {"id": user.id, "username": user.username, "employee_id": user.employee_id, "display_name": user.display_name, "level": user.level, "department_code": user.department_code}
 
 
 @app.post("/api/logout")
@@ -136,6 +175,59 @@ def logout(credentials: HTTPAuthorizationCredentials | None = Depends(security))
     if credentials:
         TOKENS.pop(credentials.credentials, None)
     return {"message": "已登出"}
+
+
+# ── Dashboard Charts ─────────────────────────────────────
+
+@app.get("/api/dashboard/spending")
+def spending_data(
+    year: int = Query(None),
+    month: int = Query(None),
+    department: str = Query(""),
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """请购花费统计：按月/年/部门/类型聚合"""
+    reqs = db.query(models.Requisition).filter(
+        models.Requisition.status.in_(["closed", "fulfilled"]),
+        models.Requisition.new_item_price != None,
+    ).all()
+
+    result: list[dict] = []
+    for r in reqs:
+        d = r.created_at
+        if year and d.year != year:
+            continue
+        if month and d.month != month:
+            continue
+        requester = db.query(models.User).filter(models.User.id == r.requester_id).first()
+        dept_code = requester.department_code if requester else ""
+        if department and dept_code != department.upper():
+            continue
+        cat_name = ""
+        if r.new_item_category_id:
+            cat = db.query(models.Category).filter(models.Category.id == r.new_item_category_id).first()
+            cat_name = cat.name if cat else ""
+        result.append({
+            "id": r.id,
+            "amount": round((r.new_item_price or 0) * r.quantity, 2),
+            "month": d.month,
+            "year": d.year,
+            "month_label": f"{d.year}-{d.month:02d}",
+            "department": dept_code,
+            "category": cat_name,
+            "item_name": r.new_item_name or "",
+            "item_id": r.item_id,
+            "quantity": r.quantity,
+            "requester": requester.username if requester else "",
+        })
+
+    # 可选的部门列表和年份列表
+    all_depts = sorted(set(
+        (u.department_code for u in db.query(models.User).filter(models.User.department_code != "").all())
+    ))
+    all_years = sorted(set(r["year"] for r in result), reverse=True)
+    return {"data": result, "departments": all_depts, "years": all_years}
 
 
 # ── User Management (Admin) ─────────────────────────────
@@ -155,17 +247,88 @@ def update_user_level(user_id: int, data: schemas.UserLevelUpdate, db: Session =
     user.level = data.level
     if data.department_code:
         user.department_code = data.department_code.upper()
+    if data.department_scope is not None:
+        user.department_scope = data.department_scope
     db.commit()
-    return {"message": "已更新", "level": user.level}
+    return {"message": "已更新", "level": user.level, "department_scope": user.department_scope}
+
+
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), admin: dict = Depends(require_admin)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.level == "admin":
+        raise HTTPException(status_code=400, detail="不能删除超级管理员")
+    if user.username == admin["username"]:
+        raise HTTPException(status_code=400, detail="不能删除自己")
+    db.delete(user)
+    db.commit()
+    return {"message": "用户已删除"}
+
+
+@app.get("/api/profile")
+def get_profile(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(models.User.username == user["username"]).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return {"username": u.username, "employee_id": u.employee_id or "", "display_name": u.display_name or "", "level": u.level, "department_code": u.department_code, "department_scope": u.department_scope or "", "role": u.role, "created_at": u.created_at.isoformat()}
+
+
+@app.put("/api/profile")
+def update_profile(data: schemas.ProfileUpdate, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(models.User.username == user["username"]).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    changed = False
+    if data.display_name is not None:
+        u.display_name = data.display_name
+        changed = True
+    if data.department_code is not None:
+        u.department_code = data.department_code.upper()
+        # 同步更新 token
+        user["department_code"] = u.department_code
+        changed = True
+    if data.password and len(data.password) >= 6:
+        u.password_hash = models.User.hash_password(data.password)
+        changed = True
+    if changed:
+        db.commit()
+        if data.display_name is not None:
+            user["display_name"] = data.display_name
+    return {"message": "已更新", "display_name": u.display_name or "", "department_code": u.department_code}
 
 
 # ── Requisition (请购) ──────────────────────────────────
 
+def _build_req_list(reqs, db: Session) -> list[dict]:
+    """批量构建请购单列表，避免 N+1 查询"""
+    result = []
+    if not reqs:
+        return result
+    user_ids = {r.requester_id for r in reqs}
+    item_ids = {r.item_id for r in reqs if r.item_id}
+    users = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(user_ids)).all()}
+    items = {i.id: i for i in db.query(models.Item).filter(models.Item.id.in_(item_ids)).all()} if item_ids else {}
+    for r in reqs:
+        d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
+        u = users.get(r.requester_id)
+        d["requester_name"] = u.username if u else ""
+        if r.item_id:
+            it = items.get(r.item_id)
+            d["item_name"] = it.name if it else ""
+        else:
+            d["item_name"] = r.new_item_name or ""
+        result.append(d)
+    return result
+
+
 STATUS_LABELS = {
     "pending_section": "待课级审批",
     "pending_department": "待部级审批",
-    "approved": "已通过",
+    "closed": "已结案",
     "rejected": "已拒绝",
+    "fulfilled": "已入库",
 }
 
 
@@ -176,6 +339,15 @@ def create_requisition(data: schemas.RequisitionCreate, db: Session = Depends(ge
         item = db.query(models.Item).filter(models.Item.id == data.item_id).first()
         if not item:
             raise HTTPException(status_code=400, detail="耗材不存在")
+        # 自动带出耗材属性
+        if data.new_item_price is None:
+            data.new_item_price = item.price
+        if not data.new_item_project:
+            data.new_item_project = item.project
+        if data.new_item_unit == "个":
+            data.new_item_unit = item.unit
+        if not data.new_item_supplier:
+            data.new_item_supplier = item.supplier
     elif not data.new_item_name:
         raise HTTPException(status_code=400, detail="请选择已有耗材或填写新耗材名称")
 
@@ -187,6 +359,7 @@ def create_requisition(data: schemas.RequisitionCreate, db: Session = Depends(ge
         new_item_project=data.new_item_project,
         new_item_price=data.new_item_price,
         new_item_unit=data.new_item_unit,
+        new_item_supplier=data.new_item_supplier or "",
         quantity=data.quantity,
         reason=data.reason,
         status="pending_section",
@@ -203,28 +376,18 @@ def my_requisitions(db: Session = Depends(get_db), user: dict = Depends(get_curr
     reqs = db.query(models.Requisition).filter(
         models.Requisition.requester_id == requester.id
     ).order_by(models.Requisition.id.desc()).all()
-    result = []
-    for r in reqs:
-        d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
-        d["requester_name"] = requester.username
-        if r.item_id:
-            item = db.query(models.Item).filter(models.Item.id == r.item_id).first()
-            d["item_name"] = item.name if item else ""
-        else:
-            d["item_name"] = r.new_item_name or ""
-        result.append(d)
-    return result
+    return _build_req_list(reqs, db)
 
 
 @app.get("/api/requisitions/pending-count")
 def pending_count(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
-    dept = user.get("department_code", "")
     level = user.get("level", "staff")
     if LEVEL_HIERARCHY.get(level, 0) < LEVEL_HIERARCHY["section"]:
         return {"count": 0}
     q = db.query(models.Requisition)
     if level != "admin":
-        sub = db.query(models.User.id).filter(models.User.department_code == dept).subquery()
+        depts = _get_user_dept_list(user)
+        sub = db.query(models.User.id).filter(models.User.department_code.in_(depts)).subquery()
         q = q.filter(models.Requisition.requester_id.in_(sub))
     if level == "section":
         q = q.filter(models.Requisition.status == "pending_section")
@@ -235,14 +398,14 @@ def pending_count(db: Session = Depends(get_db), user: dict = Depends(get_curren
 
 @app.get("/api/requisitions/to-approve")
 def requisitions_to_approve(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
-    dept = user.get("department_code", "")
     level = user.get("level", "staff")
     if LEVEL_HIERARCHY.get(level, 0) < LEVEL_HIERARCHY["section"]:
         raise HTTPException(status_code=403, detail="无审批权限")
 
     q = db.query(models.Requisition)
     if level != "admin":
-        sub = db.query(models.User.id).filter(models.User.department_code == dept).subquery()
+        depts = _get_user_dept_list(user)
+        sub = db.query(models.User.id).filter(models.User.department_code.in_(depts)).subquery()
         q = q.filter(models.Requisition.requester_id.in_(sub))
 
     if level == "section":
@@ -258,38 +421,16 @@ def requisitions_to_approve(db: Session = Depends(get_db), user: dict = Depends(
 def all_requisitions(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """所有人可查看所有请购单状态"""
     reqs = db.query(models.Requisition).order_by(models.Requisition.id.desc()).limit(500).all()
-    result = []
-    for r in reqs:
-        d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
-        requester = db.query(models.User).filter(models.User.id == r.requester_id).first()
-        d["requester_name"] = requester.username if requester else ""
-        if r.item_id:
-            item = db.query(models.Item).filter(models.Item.id == r.item_id).first()
-            d["item_name"] = item.name if item else ""
-        else:
-            d["item_name"] = r.new_item_name or ""
-        result.append(d)
-    return result
+    return _build_req_list(reqs, db)
 
 
 @app.get("/api/requisitions/approved")
 def approved_requisitions(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     """返回已通过但可快捷入库的请购(未入库的)"""
     reqs = db.query(models.Requisition).filter(
-        models.Requisition.status == "approved"
+        models.Requisition.status == "closed"
     ).order_by(models.Requisition.id.desc()).limit(200).all()
-    result = []
-    for r in reqs:
-        d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
-        requester = db.query(models.User).filter(models.User.id == r.requester_id).first()
-        d["requester_name"] = requester.username if requester else ""
-        if r.item_id:
-            item = db.query(models.Item).filter(models.Item.id == r.item_id).first()
-            d["item_name"] = item.name if item else ""
-        else:
-            d["item_name"] = r.new_item_name or ""
-        result.append(d)
-    return result
+    return _build_req_list(reqs, db)
 
 
 @app.post("/api/requisitions/{req_id}/quick-inbound")
@@ -298,8 +439,8 @@ def quick_inbound(req_id: int, db: Session = Depends(get_db), user: dict = Depen
     req = db.query(models.Requisition).filter(models.Requisition.id == req_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="请购单不存在")
-    if req.status != "approved":
-        raise HTTPException(status_code=400, detail="仅已通过的请购单可快捷入库")
+    if req.status != "closed":
+        raise HTTPException(status_code=400, detail="仅已结案的请购单可快捷入库")
 
     # 找或创建耗材
     if req.item_id:
@@ -343,12 +484,12 @@ def requisitions_history(db: Session = Depends(get_db), user: dict = Depends(get
     level = user.get("level", "staff")
     if LEVEL_HIERARCHY.get(level, 0) < LEVEL_HIERARCHY["section"]:
         raise HTTPException(status_code=403, detail="无权限查看历史记录")
-    dept = user.get("department_code", "")
     q = db.query(models.Requisition).filter(
-        models.Requisition.status.in_(["pending_department", "approved", "rejected"])
+        models.Requisition.status.in_(["pending_department", "closed", "rejected"])
     )
     if level != "admin":
-        sub = db.query(models.User.id).filter(models.User.department_code == dept).subquery()
+        depts = _get_user_dept_list(user)
+        sub = db.query(models.User.id).filter(models.User.department_code.in_(depts)).subquery()
         q = q.filter(models.Requisition.requester_id.in_(sub))
     return q.order_by(models.Requisition.id.desc()).limit(200).all()
 
@@ -383,9 +524,9 @@ def approve_requisition(req_id: int, data: schemas.RequisitionApprove, db: Sessi
         if data.action == "reject":
             req.status = "rejected"
         else:
-            req.status = "approved"
+            req.status = "closed"
     elif level == "admin":
-        req.status = "approved" if data.action == "approve" else "rejected"
+        req.status = "closed" if data.action == "approve" else "rejected"
     else:
         raise HTTPException(status_code=403, detail="无审批权限")
 
@@ -582,11 +723,15 @@ def list_inbound(
     if item_id:
         q = q.filter(models.InboundRecord.item_id == item_id)
     records = q.order_by(models.InboundRecord.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    if not records:
+        return []
+    item_ids = {r.item_id for r in records}
+    items = {i.id: i for i in db.query(models.Item).filter(models.Item.id.in_(item_ids)).all()}
     result = []
     for r in records:
         d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
-        item = db.query(models.Item).filter(models.Item.id == r.item_id).first()
-        d["item_name"] = item.name if item else ""
+        it = items.get(r.item_id)
+        d["item_name"] = it.name if it else ""
         result.append(d)
     return result
 
@@ -598,6 +743,9 @@ def create_inbound(data: schemas.InboundCreate, db: Session = Depends(get_db), u
         item = db.query(models.Item).filter(models.Item.id == data.item_id).first()
         if not item:
             raise HTTPException(status_code=400, detail="耗材不存在")
+        # 自动补全供应商
+        if not data.supplier and item.supplier:
+            data = data.model_copy(update={"supplier": item.supplier})
     # 模式2: 手动添加新耗材
     elif data.new_item_name and data.new_item_category_id:
         existing = db.query(models.Item).filter(
@@ -652,11 +800,15 @@ def list_outbound(
     if item_id:
         q = q.filter(models.OutboundRecord.item_id == item_id)
     records = q.order_by(models.OutboundRecord.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    if not records:
+        return []
+    item_ids = {r.item_id for r in records}
+    items = {i.id: i for i in db.query(models.Item).filter(models.Item.id.in_(item_ids)).all()}
     result = []
     for r in records:
         d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
-        item = db.query(models.Item).filter(models.Item.id == r.item_id).first()
-        d["item_name"] = item.name if item else ""
+        it = items.get(r.item_id)
+        d["item_name"] = it.name if it else ""
         result.append(d)
     return result
 
@@ -681,4 +833,9 @@ def create_outbound(data: schemas.OutboundCreate, db: Session = Depends(get_db),
     db.commit()
     db.refresh(record)
     return record
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 

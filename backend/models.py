@@ -11,10 +11,13 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
+    employee_id = Column(String(50), unique=True, nullable=True, index=True)
+    display_name = Column(String(100), default="")
     password_hash = Column(String(256), nullable=False)
     role = Column(String(20), nullable=False, default="user")
     level = Column(String(20), nullable=False, default="staff")
     department_code = Column(String(100), nullable=False, default="", index=True)
+    department_scope = Column(String(500), nullable=False, default="")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     @staticmethod
@@ -53,7 +56,9 @@ class Item(Base):
     price = Column(Float, nullable=True, default=0)
     unit = Column(String(20), nullable=False, default="个")
     min_stock = Column(Float, nullable=False, default=0)
+    max_stock = Column(Float, nullable=False, default=0)
     current_stock = Column(Float, nullable=False, default=0)
+    supplier = Column(String(200), default="")
     description = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -104,6 +109,7 @@ class Requisition(Base):
     new_item_project = Column(String(100), default="")
     new_item_unit = Column(String(20), default="个")
     new_item_price = Column(Float, nullable=True)
+    new_item_supplier = Column(String(200), default="")
     quantity = Column(Integer, nullable=False)
     reason = Column(Text, default="")
     status = Column(String(30), nullable=False, default="pending_section", index=True)
