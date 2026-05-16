@@ -1,0 +1,40 @@
+"""入库路由 — 入库记录列表、新增入库"""
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from database import get_db
+import models
+import schemas
+from utils.auth import get_current_user
+from services.inbound_service import create_inbound as inbound_create
+
+router = APIRouter(prefix="/api/inbound", tags=["inbound"])
+
+
+@router.get("", response_model=list[schemas.InboundOut])
+def list_inbound(
+    item_id: int = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: str = Depends(get_current_user),
+):
+    q = db.query(models.InboundRecord)
+    if item_id:
+        q = q.filter(models.InboundRecord.item_id == item_id)
+    records = q.order_by(models.InboundRecord.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    if not records:
+        return []
+    item_ids = {r.item_id for r in records}
+    items = {i.id: i for i in db.query(models.Item).filter(models.Item.id.in_(item_ids)).all()}
+    result = []
+    for r in records:
+        d = {c.name: getattr(r, c.name) for c in r.__table__.columns}
+        it = items.get(r.item_id)
+        d["item_name"] = it.name if it else ""
+        result.append(d)
+    return result
+
+
+@router.post("", response_model=schemas.InboundOut, status_code=201)
+def create_inbound(data: schemas.InboundCreate, db: Session = Depends(get_db), user: str = Depends(get_current_user)):
+    return inbound_create(db, data, user.get("display_name", "") or user.get("username", ""))

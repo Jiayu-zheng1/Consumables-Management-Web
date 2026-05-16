@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { IconDashboard, IconPackage, IconInbox, IconOutbox, IconUser, IconLogout } from "@/lib/icons";
 import { useAuth } from "@/lib/auth";
-import { getPendingCount } from "@/lib/api";
+import { getPendingCount, getMyUpdatesCount } from "@/lib/api";
 
 const baseNav = [
   { href: "/", label: "仪表盘", Icon: IconDashboard },
@@ -29,18 +29,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    if (!canApprove) return;
-    getPendingCount().then((r) => setPendingCount(r.count)).catch(() => {});
-    const t = setInterval(() => getPendingCount().then((r) => setPendingCount(r.count)).catch(() => {}), 30000);
+    async function refresh() {
+      let total = 0;
+      // 审批者（非admin）的待审批数
+      if (canApprove && !isAdmin) {
+        total += await getPendingCount().then((r) => r.count).catch(() => 0);
+      }
+      // 申请人的被拒/已结案通知
+      total += await getMyUpdatesCount().then((r) => r.count).catch(() => 0);
+      setPendingCount(total);
+    }
+    refresh();
+    const t = setInterval(refresh, 30000);
     return () => clearInterval(t);
-  }, [canApprove]);
+  }, [canApprove, isAdmin]);
 
   useEffect(() => {
-    (window as any).__refreshCount = () => {
-      if (canApprove) getPendingCount().then((r) => setPendingCount(r.count)).catch(() => {});
+    (window as any).__refreshCount = async () => {
+      let total = 0;
+      if (canApprove && !isAdmin) {
+        total += await getPendingCount().then((r) => r.count).catch(() => 0);
+      }
+      total += await getMyUpdatesCount().then((r) => r.count).catch(() => 0);
+      setPendingCount(total);
     };
     return () => { delete (window as any).__refreshCount; };
-  }, [canApprove]);
+  }, [canApprove, isAdmin]);
 
   const navItems = isAdmin
     ? [...baseNav, { href: "/users", label: "人员管理", Icon: IconDashboard }]
@@ -131,7 +145,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link href="/profile" className="flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity">
                 <IconUser size={14} />
                 <span className="text-xs font-medium truncate max-w-[80px] md:max-w-none" style={{ color: "var(--hui-text)" }}>
-                  {display_name || username}
+                  {display_name || username || "用户"}
                 </span>
               </Link>
               {level && (

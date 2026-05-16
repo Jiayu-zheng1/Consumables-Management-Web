@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/lib/auth";
-import AuthGuard from "@/lib/auth-guard";
+import AuthGuard from "@/lib/auth/guard";
 import ConditionalShell from "@/lib/conditional-shell";
 import "./globals.css";
 export const metadata: Metadata = { title: "耗材管理系统", description: "企业耗材入库、出库、库存管理平台" };

@@ -37,8 +37,8 @@ export default function LoginPage() {
         setEmpId(""); setDisplayName(""); setPassword(""); setConfirmPwd(""); setDeptCode("");
         setMode("login");
       } else {
-        await login(loginId, password);
-        router.push("/");
+        const mustChange = await login(loginId, password);
+        router.push(mustChange ? "/profile?must_change=1" : "/");
       }
     } catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
     finally { setSubmitting(false); }

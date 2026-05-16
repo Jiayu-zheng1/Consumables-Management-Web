@@ -125,12 +125,12 @@ export default function InboundPage() {
           <div className="hui-dialog" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <h3 className="hui-dialog-title">新增入库</h3>
             <div className="flex gap-1 mb-4 p-1 rounded-lg" style={{ background: "var(--hui-surface2)" }}>
-              <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === "select" ? "bg-white shadow-sm" : ""}`}
-                style={{ color: mode === "select" ? "var(--hui-text)" : "var(--hui-text2)" }} onClick={() => { setFormError(""); setMode("select"); }} type="button">选择已有耗材</button>
-              <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === "new" ? "bg-white shadow-sm" : ""}`}
-                style={{ color: mode === "new" ? "var(--hui-text)" : "var(--hui-text2)" }} onClick={() => { setFormError(""); setMode("new"); }} type="button">手动添加耗材</button>
-              <button className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${mode === "quick" ? "bg-white shadow-sm" : ""}`}
-                style={{ color: mode === "quick" ? "var(--hui-text)" : "var(--hui-text2)" }} onClick={() => { openQuickMode(); }} type="button">快捷入库</button>
+              <button className="flex-1 py-1.5 text-xs font-medium rounded-md transition-colors"
+                style={{ color: mode === "select" ? "var(--hui-text)" : "var(--hui-text2)", background: mode === "select" ? "var(--hui-surface)" : "transparent", boxShadow: mode === "select" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }} onClick={() => { setFormError(""); setMode("select"); }} type="button">选择已有耗材</button>
+              <button className="flex-1 py-1.5 text-xs font-medium rounded-md transition-colors"
+                style={{ color: mode === "new" ? "var(--hui-text)" : "var(--hui-text2)", background: mode === "new" ? "var(--hui-surface)" : "transparent", boxShadow: mode === "new" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }} onClick={() => { setFormError(""); setMode("new"); }} type="button">手动添加耗材</button>
+              <button className="flex-1 py-1.5 text-xs font-medium rounded-md transition-colors"
+                style={{ color: mode === "quick" ? "var(--hui-text)" : "var(--hui-text2)", background: mode === "quick" ? "var(--hui-surface)" : "transparent", boxShadow: mode === "quick" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }} onClick={() => { openQuickMode(); }} type="button">快捷入库</button>
             </div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               {formError && <div role="alert" className="p-2.5 rounded-lg text-xs" style={{ background: "var(--hui-danger-light)", color: "var(--hui-danger)" }}>{formError}</div>}

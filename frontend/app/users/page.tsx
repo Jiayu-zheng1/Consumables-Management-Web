@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getUsers, updateUserLevel, deleteUser, type UserInfo } from "@/lib/api";
+import { getUsers, updateUserLevel, deleteUser, resetPassword, type UserInfo } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function UsersPage() {
@@ -10,6 +10,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [editingScope, setEditingScope] = useState<number | null>(null);
   const [scopeInput, setScopeInput] = useState("");
+  const [resetResult, setResetResult] = useState<{ username: string; password: string } | null>(null);
 
   const load = useCallback(async () => { try { setLoading(true); setUsers(await getUsers()); } catch {} finally { setLoading(false); } }, []);
   useEffect(() => { load(); }, [load]);
@@ -28,6 +29,14 @@ export default function UsersPage() {
     if (!confirm(`确定要删除用户「${u.username}」吗？此操作不可撤销。`)) return;
     try { await deleteUser(u.id); load(); }
     catch (e) { alert(e instanceof Error ? e.message : "删除失败"); }
+  }
+
+  async function handleResetPwd(u: UserInfo) {
+    if (!confirm(`确定要重置「${u.username}」的密码吗？重置后该用户将被强制修改密码。`)) return;
+    try {
+      const res = await resetPassword(u.id);
+      setResetResult({ username: res.username, password: res.new_password });
+    } catch (e) { alert(e instanceof Error ? e.message : "重置失败"); }
   }
 
   function startEditScope(u: UserInfo) {
@@ -70,7 +79,7 @@ export default function UsersPage() {
                   editingScope === u.id ? (
                     <div className="flex gap-1 items-center">
                       <input className="hui-input" style={{ height: 26, fontSize: 11, width: 160 }} value={scopeInput}
-                        onChange={(e) => setScopeInput(e.target.value.toUpperCase())}
+                        onChange={(e) => setScopeInput(e.target.value.replace(/\s+/g, ",").toUpperCase())}
                         placeholder="如 6512,6425"
                         onKeyDown={(e) => { if (e.key === "Enter") saveScope(u.id, u.level, u.department_code); if (e.key === "Escape") setEditingScope(null); }}
                         autoFocus />
@@ -92,16 +101,41 @@ export default function UsersPage() {
               <td className="text-xs" style={{ color: "var(--hui-text3)" }}>{new Date(u.created_at).toLocaleString("zh-CN")}</td>
               <td>
                 {u.level !== "admin" && (
-                  <button
-                    className="hui-btn hui-btn-danger hui-btn-sm"
-                    style={{ height: 26, fontSize: 11, padding: "0 8px" }}
-                    onClick={() => handleDelete(u)}
-                  >删除</button>
+                  <div className="flex gap-1">
+                    <button
+                      className="hui-btn hui-btn-ghost hui-btn-sm"
+                      style={{ height: 26, fontSize: 11, padding: "0 8px" }}
+                      onClick={() => handleResetPwd(u)}
+                    >重置密码</button>
+                    <button
+                      className="hui-btn hui-btn-danger hui-btn-sm"
+                      style={{ height: 26, fontSize: 11, padding: "0 8px" }}
+                      onClick={() => handleDelete(u)}
+                    >删除</button>
+                  </div>
                 )}
               </td>
             </tr>
           ))}</tbody>
         </table></div>
+      )}
+
+      {/* 重置密码结果弹窗 */}
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)" }} onClick={() => setResetResult(null)}>
+          <div className="hui-card p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold mb-4" style={{ color: "var(--hui-text)" }}>密码已重置</h3>
+            <p className="text-sm mb-1" style={{ color: "var(--hui-text2)" }}>用户: <strong>{resetResult.username}</strong></p>
+            <div className="p-3 rounded-lg my-3 text-center" style={{ background: "var(--hui-success-light)" }}>
+              <span className="text-xs" style={{ color: "var(--hui-text3)" }}>新密码: </span>
+              <code className="text-lg font-bold tracking-wider" style={{ color: "var(--hui-success)" }}>{resetResult.password}</code>
+            </div>
+            <p className="text-xs mb-4" style={{ color: "var(--hui-text3)" }}>
+              该用户下次登录时需要修改密码。请将此密码告知用户。
+            </p>
+            <button className="hui-btn hui-btn-solid w-full" onClick={() => setResetResult(null)}>知道了</button>
+          </div>
+        </div>
       )}
     </div>
   );
