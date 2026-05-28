@@ -188,14 +188,14 @@ export default function RequisitionsPage() {
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex items-center justify-between gap-3 mb-5">
-        <div><h2 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>请购管理</h2><p className="text-sm mt-0.5" style={{ color: "var(--hui-text2)" }}>耗材请购·审批·记录</p></div>
+        <div className="accent-bar accent-bar-warning"><h2 className="text-lg font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>请购管理</h2><p className="text-xs mt-0.5 uppercase tracking-wider font-semibold" style={{ color: "var(--hui-text3)" }}>耗材请购·审批·记录</p></div>
         <button className="hui-btn hui-btn-solid hui-btn-sm" onClick={() => { setResubmitId(null); resetForm(); setShowForm(true); }}><IconPlus size={16} />新建请购</button>
       </header>
 
-      <div className="flex gap-1 mb-4 p-1 rounded-lg" style={{ background: "var(--hui-surface2)" }}>
-        {canApprove && <TabBtn active={tab === "approve"} onClick={() => setTab("approve")}>待审批</TabBtn>}
-        <TabBtn active={tab === "my"} onClick={() => setTab("my")}>我的请购</TabBtn>
-        {canApprove && <TabBtn active={tab === "history"} onClick={() => setTab("history")}>历史记录</TabBtn>}
+      <div className="hui-tabs mb-4">
+        {canApprove && <button className={`hui-tab ${tab === "approve" ? "active" : ""}`} onClick={() => setTab("approve")}>待审批</button>}
+        <button className={`hui-tab ${tab === "my" ? "active" : ""}`} onClick={() => setTab("my")}>我的请购</button>
+        {canApprove && <button className={`hui-tab ${tab === "history" ? "active" : ""}`} onClick={() => setTab("history")}>历史记录</button>}
       </div>
 
       {tab === "approve" && <ApproveTab loading={loading} reqs={pendingReqs} comment={approveComment} setComment={setApproveComment} onApprove={handleApprove} />}
@@ -304,13 +304,6 @@ export default function RequisitionsPage() {
 }
 
 /* ── Sub-components ──────────────────────────────────── */
-
-function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button className="flex-1 py-1.5 text-xs font-medium rounded-md transition-colors"
-      style={{ color: active ? "var(--hui-text)" : "var(--hui-text2)", background: active ? "var(--hui-surface)" : "transparent", boxShadow: active ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }} onClick={onClick}>{children}</button>
-  );
-}
 
 function ApproveTab({ loading, reqs, comment, setComment, onApprove }: {
   loading: boolean; reqs: Requisition[];

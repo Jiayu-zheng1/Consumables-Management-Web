@@ -49,8 +49,8 @@ export default function UsersPage() {
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <header className="mb-5">
-        <h2 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>人员管理</h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--hui-text2)" }}>管理系统用户和权限级别，部级人员可设置审批部门范围</p>
+        <div className="accent-bar"><h2 className="text-lg font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>人员管理</h2></div>
+        <p className="text-xs mt-1 uppercase tracking-wider font-semibold" style={{ color: "var(--hui-text3)" }}>管理系统用户和权限级别，部级人员可设置审批部门范围</p>
       </header>
       {loading ? <p className="text-center py-12" style={{ color: "var(--hui-text2)" }}>加载中...</p>
       : (

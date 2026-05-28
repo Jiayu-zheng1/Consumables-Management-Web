@@ -45,7 +45,7 @@ export default function CategoriesPage() {
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
       <header className="flex items-center justify-between gap-3 mb-5">
-        <div><h2 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>类别管理</h2><p className="text-sm mt-0.5" style={{ color: "var(--hui-text2)" }}>可在新增耗材时快速创建</p></div>
+        <div className="accent-bar"><h2 className="text-lg font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>类别管理</h2><p className="text-xs mt-0.5 uppercase tracking-wider font-semibold" style={{ color: "var(--hui-text3)" }}>可在新增耗材时快速创建</p></div>
         <button className="hui-btn hui-btn-solid hui-btn-sm" onClick={openCreate}><IconPlus size={16} />新 增</button>
       </header>
 

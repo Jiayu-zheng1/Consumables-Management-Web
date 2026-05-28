@@ -45,33 +45,115 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--hui-bg)" }}>
-      <div className="hui-card w-full max-w-[380px] p-8">
+    <main
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "var(--hui-bg)", position: "relative" }}
+    >
+      {/* 背景装饰 */}
+      <div
+        style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: "40vh",
+          background: "linear-gradient(180deg, var(--hui-primary-light) 0%, transparent 100%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        className="hui-card w-full max-w-[400px] p-8"
+        style={{ zIndex: 1, position: "relative" }}
+      >
+        {/* 品牌区 */}
         <div className="text-center mb-8">
-          <h1 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>耗材管理系统</h1>
-          <p className="text-sm mt-2" style={{ color: "var(--hui-text2)" }}>{mode === "login" ? "请登录以继续" : "创建新账号"}</p>
+          <div
+            style={{
+              display: "inline-flex", width: 44, height: 44, borderRadius: "var(--hui-radius)",
+              background: "var(--hui-primary)", alignItems: "center", justifyContent: "center",
+              fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 16,
+            }}
+          >
+            耗
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>
+            耗材管理系统
+          </h1>
+          <p className="text-sm mt-2" style={{ color: "var(--hui-text2)" }}>
+            {mode === "login" ? "登录以继续使用" : "创建新账号"}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error && <div role="alert" className="p-3 rounded-lg text-sm" style={{ background: "var(--hui-danger-light)", color: "var(--hui-danger)" }}>{error}</div>}
-          {msg && <div role="status" className="p-3 rounded-lg text-sm" style={{ background: "var(--hui-success-light)", color: "var(--hui-success)" }}>{msg}</div>}
+          {error && (
+            <div role="alert" className="p-3 rounded-lg text-sm font-medium" style={{ background: "var(--hui-danger-light)", color: "var(--hui-danger)" }}>
+              {error}
+            </div>
+          )}
+          {msg && (
+            <div role="status" className="p-3 rounded-lg text-sm font-medium" style={{ background: "var(--hui-success-light)", color: "var(--hui-success)" }}>
+              {msg}
+            </div>
+          )}
 
-          <div className="hui-input-wrap"><label htmlFor="l-u">{mode === "register" ? "工号" : "工号/用户名"}</label><input id="l-u" className="hui-input" autoComplete="username" required value={mode === "register" ? empId : loginId} onChange={(e) => mode === "register" ? setEmpId(e.target.value) : setLoginId(e.target.value)} placeholder={mode === "register" ? "员工工号" : "输入工号或用户名"} /></div>
-          {mode === "register" && <><div className="hui-input-wrap"><label htmlFor="l-n">姓名</label><input id="l-n" className="hui-input" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="真实姓名" /></div></>}
-          <div className="hui-input-wrap"><label htmlFor="l-p">密码</label><input id="l-p" className="hui-input" type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder={mode === "register" ? "至少6位字符" : "请输入密码"} /></div>
-          {mode === "register" && <><div className="hui-input-wrap"><label htmlFor="l-c">确认密码</label><input id="l-c" className="hui-input" type="password" autoComplete="new-password" required value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="再次输入密码" /></div><div className="hui-input-wrap"><label htmlFor="l-d">部门代码</label><input id="l-d" className="hui-input" required value={deptCode} onChange={(e) => setDeptCode(e.target.value.toUpperCase())} placeholder="如 D001" /></div></>}
+          <div className="hui-input-wrap">
+            <label htmlFor="l-u">{mode === "register" ? "工号" : "工号/用户名"}</label>
+            <input id="l-u" className="hui-input" autoComplete="username" required
+              value={mode === "register" ? empId : loginId}
+              onChange={(e) => mode === "register" ? setEmpId(e.target.value) : setLoginId(e.target.value)}
+              placeholder={mode === "register" ? "员工工号" : "输入工号或用户名"} />
+          </div>
 
-          <button className="hui-btn hui-btn-solid w-full mt-2" type="submit" disabled={submitting}>{submitting ? "处理中..." : mode === "login" ? "登 录" : "注 册"}</button>
+          {mode === "register" && (
+            <div className="hui-input-wrap">
+              <label htmlFor="l-n">姓名</label>
+              <input id="l-n" className="hui-input" required value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)} placeholder="真实姓名" />
+            </div>
+          )}
+
+          <div className="hui-input-wrap">
+            <label htmlFor="l-p">密码</label>
+            <input id="l-p" className="hui-input" type="password"
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
+              required value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder={mode === "register" ? "至少6位字符" : "请输入密码"} />
+          </div>
+
+          {mode === "register" && (
+            <>
+              <div className="hui-input-wrap">
+                <label htmlFor="l-c">确认密码</label>
+                <input id="l-c" className="hui-input" type="password" autoComplete="new-password"
+                  required value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)}
+                  placeholder="再次输入密码" />
+              </div>
+              <div className="hui-input-wrap">
+                <label htmlFor="l-d">部门代码</label>
+                <input id="l-d" className="hui-input" required value={deptCode}
+                  onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
+                  placeholder="如 D001" />
+              </div>
+            </>
+          )}
+
+          <button className="hui-btn hui-btn-solid w-full mt-2" type="submit" disabled={submitting}
+            style={{ height: 42, fontWeight: 600 }}>
+            {submitting ? "处理中..." : mode === "login" ? "登  录" : "注  册"}
+          </button>
         </form>
 
         <p className="text-center text-xs mt-5" style={{ color: "var(--hui-text3)" }}>
           {mode === "login" ? (
-            <>没有账号？<button className="font-medium hover:underline" style={{ color: "var(--hui-primary)" }} onClick={() => { setMode("register"); setError(""); setMsg(""); }} type="button">立即注册</button></>
+            <>没有账号？<button className="font-semibold hover:underline" style={{ color: "var(--hui-primary-text)" }}
+              onClick={() => { setMode("register"); setError(""); setMsg(""); }} type="button">立即注册</button></>
           ) : (
-            <>已有账号？<button className="font-medium hover:underline" style={{ color: "var(--hui-primary)" }} onClick={() => { setMode("login"); setError(""); setMsg(""); }} type="button">返回登录</button></>
+            <>已有账号？<button className="font-semibold hover:underline" style={{ color: "var(--hui-primary-text)" }}
+              onClick={() => { setMode("login"); setError(""); setMsg(""); }} type="button">返回登录</button></>
           )}
         </p>
-        {mode === "login" && <p className="text-center text-[11px] mt-2" style={{ color: "var(--hui-text3)" }}>管理员: admin / admin123</p>}
+        {mode === "login" && (
+          <p className="text-center text-[11px] mt-2 py-1.5 rounded-md" style={{ color: "var(--hui-text3)", background: "var(--hui-surface2)" }}>
+            管理员: admin / admin123
+          </p>
+        )}
       </div>
     </main>
   );

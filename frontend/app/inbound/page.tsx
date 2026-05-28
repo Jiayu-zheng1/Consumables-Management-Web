@@ -59,6 +59,7 @@ export default function InboundPage() {
     try { setSubmitting(true);
       const res = await quickInbound(reqId);
       alert(`${res.item_name} +${res.quantity} 入库成功`);
+      (window as any).__refreshCount?.();
       setShowForm(false); load(); loadMeta();
     } catch (e) { alert(e instanceof Error ? e.message : "快捷入库失败"); }
     finally { setSubmitting(false); }
@@ -97,7 +98,7 @@ export default function InboundPage() {
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex items-center justify-between gap-3 mb-5">
-        <div><h2 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>入库管理</h2><p className="text-sm mt-0.5" style={{ color: "var(--hui-text2)" }}>操作人自动设为当前账号</p></div>
+        <div className="accent-bar accent-bar-success"><h2 className="text-lg font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>入库管理</h2><p className="text-xs mt-0.5 uppercase tracking-wider font-semibold" style={{ color: "var(--hui-text3)" }}>操作人自动设为当前账号</p></div>
         <button className="hui-btn hui-btn-solid hui-btn-sm" onClick={() => { reset(); setShowForm(true); }}><IconPlus size={16} />新 增</button>
       </header>
 

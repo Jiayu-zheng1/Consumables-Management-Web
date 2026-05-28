@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getProfile, updateProfile, type ProfileInfo } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center" style={{ color: "var(--hui-text2)" }}>加载中...</div>}>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileContent() {
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
@@ -57,8 +65,8 @@ export default function ProfilePage() {
   return (
     <div className="p-4 md:p-6 max-w-lg mx-auto">
       <header className="mb-6">
-        <h2 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>个人信息</h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--hui-text2)" }}>查看和修改个人资料</p>
+        <div className="accent-bar"><h2 className="text-lg font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>个人信息</h2></div>
+        <p className="text-xs mt-1 uppercase tracking-wider font-semibold" style={{ color: "var(--hui-text3)" }}>查看和修改个人资料</p>
       </header>
 
       {forceChange && (

@@ -31,11 +31,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function refresh() {
       let total = 0;
-      // 审批者（非admin）的待审批数
       if (canApprove && !isAdmin) {
         total += await getPendingCount().then((r) => r.count).catch(() => 0);
       }
-      // 申请人的被拒/已结案通知
       total += await getMyUpdatesCount().then((r) => r.count).catch(() => 0);
       setPendingCount(total);
     }
@@ -68,13 +66,41 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-full overflow-hidden" style={{ background: "var(--hui-bg)" }}>
       {/* 桌面端侧边栏 */}
-      <aside className="hidden md:flex flex-col w-[220px] shrink-0 hui-sidebar select-none">
+      <aside
+        className="hidden md:flex flex-col w-[224px] shrink-0 hui-sidebar select-none"
+        style={{ position: "relative", zIndex: 1 }}
+      >
+        {/* 品牌区 */}
         <header className="px-5 pt-6 pb-4">
-          <Link href="/" className="no-underline" style={{ color: "inherit" }}>
-            <h1 className="text-[13px] font-semibold" style={{ color: "var(--hui-text)" }}>耗材管理系统</h1>
+          <Link href="/" className="no-underline block" style={{ color: "inherit" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                style={{
+                  display: "inline-flex",
+                  width: 22,
+                  height: 22,
+                  borderRadius: "var(--hui-radius-sm)",
+                  background: "var(--hui-primary)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#fff",
+                }}
+              >
+                耗
+              </span>
+              <h1 className="text-[13px] font-bold" style={{ color: "var(--hui-text)" }}>
+                耗材管理系统
+              </h1>
+            </div>
           </Link>
-          <p className="text-[11px] mt-0.5" style={{ color: "var(--hui-text3)" }}>入库 · 出库 · 库存</p>
+          <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--hui-text3)", paddingLeft: 30 }}>
+            Inventory Control
+          </p>
         </header>
+
+        {/* 导航 */}
         <nav aria-label="主导航" className="flex-1 overflow-y-auto px-3">
           <ul className="flex flex-col gap-0.5" style={{ listStyle: "none", padding: 0 }}>
             {navItems.map(({ href, label, Icon }) => {
@@ -83,15 +109,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <li key={href}>
                   <Link
                     href={href}
-                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[7px] text-[13px] font-medium transition-colors duration-150"
+                    className="flex items-center gap-2.5 px-2.5 py-[7px] rounded-[6px] text-[13px] font-medium transition-all duration-150 relative"
                     style={{
-                      color: active ? "var(--hui-primary)" : "var(--hui-text2)",
+                      color: active ? "var(--hui-primary-text)" : "var(--hui-text2)",
                       background: active ? "var(--hui-primary-light)" : "transparent",
+                      borderLeft: active ? "2.5px solid var(--hui-primary)" : "2.5px solid transparent",
                     }}
                     aria-current={active ? "page" : undefined}
                   >
                     <Icon size={17} />
-                    {label}
+                    <span>{label}</span>
                     {href === "/requisitions" && pendingCount > 0 && (
                       <span
                         className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px] text-[10px] font-bold text-white rounded-full"
@@ -106,16 +133,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </ul>
         </nav>
-        <footer className="px-4 py-3 border-t" style={{ borderColor: "var(--hui-border)" }}>
-          <p className="text-[10px]" style={{ color: "var(--hui-text3)" }}>v1.0</p>
+
+        {/* 底部信息 */}
+        <footer
+          className="px-4 py-3 border-t mx-3"
+          style={{ borderColor: "var(--hui-border)" }}
+        >
+          <div className="flex items-center gap-2">
+            <IconUser size={13} style={{ color: "var(--hui-text3)" }} />
+            <span className="text-[11px] truncate font-medium" style={{ color: "var(--hui-text2)" }}>
+              {display_name || username || "用户"}
+            </span>
+          </div>
+          {level && (
+            <span
+              className="inline-block text-[10px] mt-1.5 px-2 py-0.5 rounded-full font-semibold"
+              style={{
+                background: level === "admin" ? "var(--hui-danger-light)" : "var(--hui-primary-light)",
+                color: level === "admin" ? "var(--hui-danger)" : "var(--hui-primary-text)",
+              }}
+            >
+              {LEVEL_LABELS[level] || level}
+            </span>
+          )}
         </footer>
       </aside>
 
       {/* 移动端底部导航 */}
       <nav
         aria-label="移动端导航"
-        className="md:hidden fixed bottom-0 start-0 end-0 z-40 hui-sidebar border-t flex justify-around safe-area-inset-bottom"
-        style={{ borderColor: "var(--hui-border)" }}
+        className="md:hidden fixed bottom-0 start-0 end-0 z-40 hui-sidebar border-t flex justify-around"
+        style={{ borderColor: "var(--hui-border)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {baseNav.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -123,11 +171,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[50px] min-w-[56px] transition-colors duration-150"
-              style={{ color: active ? "var(--hui-primary)" : "var(--hui-text2)" }}
+              className="flex flex-col items-center justify-center gap-[2px] py-2 px-1 min-h-[50px] min-w-[56px] transition-colors duration-150 relative"
+              style={{ color: active ? "var(--hui-primary-text)" : "var(--hui-text2)" }}
             >
+              {active && (
+                <span
+                  style={{
+                    position: "absolute", top: 0, left: "20%", right: "20%", height: 2.5,
+                    background: "var(--hui-primary)", borderRadius: "0 0 2px 2px",
+                  }}
+                />
+              )}
               <Icon size={20} />
-              <span className="text-[10px] font-medium leading-none">{label}</span>
+              <span className="text-[10px] font-semibold leading-none">{label}</span>
             </Link>
           );
         })}
@@ -135,52 +191,60 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* 主内容区 */}
       <main id="main-content" className="flex-1 flex flex-col overflow-hidden" tabIndex={-1}>
-        {/* 顶部用户信息栏 */}
+        {/* 顶部操作栏 */}
         <header
-          className="flex items-center justify-end shrink-0 px-4 md:px-6 py-2 border-b"
-          style={{ borderColor: "var(--hui-border)", background: "var(--hui-surface)" }}
+          className="flex items-center justify-between shrink-0 px-4 md:px-6 py-2 border-b"
+          style={{ borderColor: "var(--hui-border)", background: "var(--hui-surface)", position: "relative", zIndex: 1 }}
         >
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="flex items-center gap-1.5 md:gap-2">
-              <Link href="/profile" className="flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity">
-                <IconUser size={14} />
-                <span className="text-xs font-medium truncate max-w-[80px] md:max-w-none" style={{ color: "var(--hui-text)" }}>
-                  {display_name || username || "用户"}
-                </span>
-              </Link>
-              {level && (
-                <span
-                  className="hui-chip text-[10px] hidden md:inline-flex"
-                  style={{
-                    background: level === "admin" ? "var(--hui-danger-light)" : "var(--hui-primary-light)",
-                    color: level === "admin" ? "var(--hui-danger)" : "var(--hui-primary)",
-                  }}
-                >
-                  {LEVEL_LABELS[level] || level}
-                </span>
-              )}
-              {department_code && (
-                <span className="text-[10px] hidden md:inline" style={{ color: "var(--hui-text3)" }}>
-                  {department_code}
-                </span>
-              )}
-            </div>
-            <div className="hidden md:block" style={{ width: 1, height: 16, background: "var(--hui-border)" }} />
+          {/* 左侧：面包屑/页面标题 */}
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--hui-text3)" }}>
+              {(() => {
+                const item = navItems.find((n) => pathname === n.href || (n.href !== "/" && pathname.startsWith(n.href)));
+                return item ? item.label : "";
+              })()}
+            </span>
+          </div>
+
+          {/* 右侧：用户信息 + 退出 */}
+          <div className="flex items-center gap-2 md:gap-3 ml-auto">
+            <Link
+              href="/profile"
+              className="flex items-center gap-1.5 no-underline hover:opacity-80 transition-opacity"
+            >
+              <IconUser size={14} />
+              <span
+                className="text-xs font-medium truncate max-w-[80px] md:max-w-none"
+                style={{ color: "var(--hui-text)" }}
+              >
+                {display_name || username || "用户"}
+              </span>
+            </Link>
+            {department_code && (
+              <code
+                className="text-[10px] hidden md:inline px-1.5 py-0.5 rounded font-mono"
+                style={{ background: "var(--hui-surface2)", color: "var(--hui-text2)" }}
+              >
+                {department_code}
+              </code>
+            )}
+            <div className="hidden md:block mx-0.5" style={{ width: 1, height: 18, background: "var(--hui-border)" }} />
             <button
               onClick={handleLogout}
-              className="text-[11px] flex items-center gap-1 transition-colors shrink-0"
+              className="text-[11px] flex items-center gap-1 transition-colors shrink-0 font-medium"
               style={{ color: "var(--hui-text3)" }}
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--hui-danger)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = "var(--hui-text3)"; }}
               type="button"
             >
               <IconLogout size={11} />
-              <span className="hidden md:inline">退出登录</span>
+              <span className="hidden md:inline">退出</span>
             </button>
           </div>
         </header>
+
         {/* 页面内容 */}
-        <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
+        <div className="flex-1 overflow-y-auto pb-16 md:pb-0" style={{ position: "relative", zIndex: 0 }}>
           {children}
         </div>
       </main>

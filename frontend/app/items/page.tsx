@@ -76,7 +76,7 @@ export default function ItemsPage() {
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div><h2 className="text-xl font-bold" style={{ color: "var(--hui-text)" }}>耗材管理</h2><p className="text-sm mt-0.5" style={{ color: "var(--hui-text2)" }}>共 {items.length} 项</p></div>
+        <div className="accent-bar"><h2 className="text-lg font-extrabold tracking-tight" style={{ color: "var(--hui-text)" }}>耗材管理</h2><p className="text-xs mt-0.5 uppercase tracking-wider font-semibold" style={{ color: "var(--hui-text3)" }}>共 {items.length} 项</p></div>
         <button className="hui-btn hui-btn-solid hui-btn-sm" onClick={openCreate}><IconPlus size={16} />新 增</button>
       </header>
 
